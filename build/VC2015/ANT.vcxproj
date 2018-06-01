@@ -58,6 +58,7 @@
     <ProjectGuid>{45E06948-1433-4330-962B-6CECFCFE33CA}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ANT</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -124,7 +125,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\bin\</OutDir>
-    <TargetName>$(ProjectName)_64_d</TargetName>
+    <TargetName>$(ProjectName)_$(Configuration)_$(Platform)_$(PlatformToolset)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -134,7 +135,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\bin\</OutDir>
-    <TargetName>$(ProjectName)_64</TargetName>
+    <TargetName>$(ProjectName)_$(Configuration)_$(Platform)_$(PlatformToolset)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -199,7 +200,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_WIN32_WINNT=0x0501;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\..;f:\boost\boost_1_60_0\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..;f:\boost\boost_1_67_0\</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -211,7 +212,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>c:\boost\lib\x64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>c:\boost\lib\</AdditionalLibraryDirectories>
       <Profile>true</Profile>
       <HeapReserveSize>104857600</HeapReserveSize>
       <HeapCommitSize>104857600</HeapCommitSize>

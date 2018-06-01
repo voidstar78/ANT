@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="SERVER_Header Files">
+      <UniqueIdentifier>{3d7ea935-8280-4d5d-981d-5befd128dfe2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CLIENT_Header Files">
+      <UniqueIdentifier>{85edd07a-79af-4012-abfb-cfe28f06017d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CLIENT_Source Files">
+      <UniqueIdentifier>{a23d72cd-9764-494e-8ef1-0e3c324ea1dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SERVER_Source Files">
+      <UniqueIdentifier>{287f44b7-94c7-42d3-a05a-3f028b41eae7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OTHER_Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="OTHER_Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\source\common_program_options_handler.cpp">
+      <Filter>OTHER_Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\common_types.cpp">
+      <Filter>OTHER_Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\main.cpp">
+      <Filter>OTHER_Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\ant_server.cpp">
+      <Filter>SERVER_Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\client_connection_manager.cpp">
+      <Filter>SERVER_Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\ant_client.cpp">
+      <Filter>CLIENT_Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\application_status.cpp">
+      <Filter>OTHER_Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\statistics.cpp">
+      <Filter>OTHER_Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\common_program_options_handler.h">
+      <Filter>OTHER_Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common_types.h">
+      <Filter>OTHER_Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ant_server.h">
+      <Filter>SERVER_Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\client_connection_manager.h">
+      <Filter>SERVER_Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ant_client.h">
+      <Filter>CLIENT_Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\application_status.h">
+      <Filter>OTHER_Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\stopwatch_t.h">
+      <Filter>OTHER_Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\statistics.h">
+      <Filter>OTHER_Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
