@@ -1,6 +1,0 @@
-﻿  main.cpp
-  application_status.cpp
-  Generating code
-f:\software_projects\ant_0_1_7\ant\source\statistics.cpp : warning C4964: No optimization options were specified; profile info will not be collected
-  Finished generating code
-  ANT.vcxproj -> F:\software_projects\ANT_0_1_7\ANT\build\VC2015\..\..\bin\ANT_64_d.exe
