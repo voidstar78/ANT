@@ -1,0 +1,270 @@
+Steve Lewis
+contact.steve.usa@gmail.com
+
+Introduction to ANT: A Network (Performance) Tester
+===================================================
+ANT was inspired by two existing network performance testers: LST and iperf.  These are excellent
+tools for assessing network performance for either Windows or Linux.  But beyond just testing
+network performance, ANT has the following goals:
+
+- Provide a framework that can be re-used in other applications to share unstructured data across processes
+
+  This means arranging the source code into re-usable objects, and establishing a well defined protocol
+  between the client and server.  Clients send commands to the server, while appropriate threaded objects
+  handle the responses from the server to those commands.  This also means handling the actual receipt
+  of requested data from an input stream (i.e. confirmation of full receipt, removal of HEADER/FOOTER,
+  and hand off to the application for its exclusive usage).
+
+- Be a leading example of a well built cross-platform C++ application
+
+  This means gracefully handling real world error conditions, such as if the client or server spontaneously 
+  disconnect at any point during the processing (e.g. loss of power).  This also means using C++ as intended, 
+  taking advantages of the features of boost and lambda expressions, and providing the best performance and 
+  most accurate timing results possible.
+
+- Address issues related to supporting multiple client connections
+
+  This is another real world issues, where having a single client "lock" a socket connection is unacceptable.
+  The ANT protocol has some overhead to address this issue, where the HEADER/FOOTER include client identifiers.
+  NOTE: Robust servers, like ActiveMQ, help scale to massive client connections by dynamically distributing across
+  multiple socket ports.
+
+ANT includes a reference application that demonstrates how to use its client/server API.  This application
+facilitates testing various ways to transfer data from one process to another.  
+
+  FILE MODE      includes overhead of buffering file content into application memory for transfer over TCP/IP
+
+  RAPID MODE     avoids all allocation overhead to help focus on a more "pure" NIC performance
+
+  NON-RAPID MODE more authentic mode, since any data of value to be sent doesn't just instantly appear; it is
+                 recorded or produced by some action that takes time; NON-RAPID MODE simulates this action by
+                 generating random sequence data.
+
+In a way, ANT is like an FTP API.  The ANT reference application can be used for that purpose, to transfer any
+file (ASCII or binary) from one network node to another.  But with two main differences:
+
+- The transmitted packets have a header and footer used to encode very precise timing metrics
+- Focus on efficiently transmitting very large amounts of data (such as more than can be held in main memory)
+
+The "secret sauce" here is that multi-core execution is used to load the next batch/chunk of data to be transmitted,
+while at the same time the current chunk is actually being transmitted.  These two activities could happen at very 
+different relative speeds, depending on a wide number of factors as discussed later in these notes.
+
+
+The Beep Metric
+===============
+In trying to determine how to tell when one thread (e.g. sending buffered data to the NIC via TCP/IP) is waiting of 
+another thread (e.g. preparing data to be sent), I considered using the audible ^G (BEL/BEEP) to signal that this 
+has happened.
+
+Obviously that got annoying, but I still refer to this as "the BEEP metric" or just "beeps".  It generally indicates
+that one of the tuning parameters is not optimally configured (which may need adjustments per OS, NIC drivers,
+or general hardware performance of the host system).  But even so, it may be a necessary evil that ANT "holds back"
+in order to allow other processes their turn to execute on the cores.
+
+SERVER-BEEPS: Ran out of DEPTH space and therefore unable to queue up another async_send.  This never
+happens in RAPID-MODE, but otherwise indicates the server may be struggling to load or prepare data to be
+sent to the client.  These would appear in the output as follows:
+
+                                                              vvvvv number of BEEPS
+CID2[TEST2]: Finished iteration 6 of 20 (27392320 bytes sent) [12]
+CID2[TEST2]: Finished iteration 7 of 20 (27392320 bytes sent) [21]
+
+
+CLIENT-BEEPS: The client has received all the requested data, but is still "distributing" that data from the
+input streams over into a buffer to be used by the application.  This would be an usual case that implies the
+main memory being much slower than the NIC?  This would appear in the output as follows:
+Idle time beeps = 34
+
+
+
+Another metric (CLIENT-SIDE):  If the number of bytes is small, sometimes multiple test iterations can
+complete very rapidly.  There is a number at the end of each client result, showing how many additional
+extra bytes has been received (which is data corresponding to the next iteration, and does not apply to 
+the current iteration).  Generally this indicates that the timing results might be skewed or inconsistent.
+
+                                                                                                                             vvvvvvvvv extra bytes
+(000001/000020) [memory=002,405.623  SEND=000,046.056  RECV=000,013.368 MBps]  [SEND=000,000.001696  RECV=000,000.005844 sec] (49008)
+(000002/000020) [memory=002,253.422  SEND=000,043.233  RECV=000,013.497 MBps]  [SEND=000,000.001807  RECV=000,000.005788 sec] (32336)
+(000003/000020) [memory=002,945.187  SEND=000,043.457  RECV=000,013.838 MBps]  [SEND=000,000.001798  RECV=000,000.005646 sec] (15664)
+
+In either case (client or server), adjusting the WORKING BUFFER LENGTH might reduce the number of beeps over 
+overrun bytes.  Beeps don't necessarily mean an overall performance problem.  An idle thread just means room for 
+another thread or process to execute.
+
+
+
+On Network Performance Testing
+==============================
+For a gigabit network, the expected performance is 125MB/s.  We all understand that is a "theoretical" performance,
+but it can be very flustrating to understand why we might only achieve a fraction of that performance (like 1.5MB/s).
+
+There are many factors involved when it comes to measuring network performance.  One particular factor is the overhead
+of caching chunks/portions of the data to be transferred.   That step involves various hardware drivers to load the data
+from large storage (solid state or mechanical drive) across a system bus and into main memory, to be accessible by the
+process that will then be performing the actual transfer of the data.    From there, the process must coordinate with
+the operating system (e.g. TCP/IP stacks) to shuffle the data from that processes perspective of main memory (which might 
+actually be virtual), then into another set of drivers to access the NIC buffers.  
+
+If you understand the TCP/IP protocol, it guarantees order and delivery.  That means end to end performance is throttled
+by the performance between the sender and receive.  A slow receiver will have NIC or OS buffers filled up, and the sender
+must busy-wait until the receiver is able to proceed.  Conversely, a slow sender might not be able to fill NIC or OS buffers
+fast enough, the receiver ends up idle.   "slow" in this context is relative to each other, like one machine in the network
+with a much slower CPU, system bus, or RAM access.  Or a sender of a wired connection transmitting to a wireless system.
+
+Aside from the protocol overhead and hardware overhead, then naturally there is overhead from other processes.  These
+process provide features like "network discovery" (to dynamically determine available devices on the network), or users
+performing other activities like streaming video, file backup, or virus scanning.
+
+Keep in mind, if you perform a network testing using "localhost", you can skip a lot of the NIC, system bus, and driver overhead.
+The OS should optimize this path, such that testing across "localhost" will give results that far exceed the network spec.
+In this way, localhost can be used as a sort of "memory performance test".
+
+
+Notes on Building ANT
+=====================
+While I am comfortible with Linux, I confess that Visual Studio is my main development environment.  
+I met the VS development team in Seattle around 2006, and have a lot of respect for how that team
+completely turned Visual Studio around since the 2005 release (in terms of C++ language compliance,
+intellisense performance improvements, and just an huge overhaul of their product).
+
+The build sub-folder has the VS solutions for various versions.  The only dependency of ANT is boost.
+Feel free to add support for additional compiler/platforms, using new sub-folders under the build folder
+as appropriate.
+
+
+Notes on Building Boost
+=======================
+From the Visual Studio "x64 Native Tools Command Prompt" or equivalent:
+(go to the boost installation drive and folder)
+f:\boost\boost_1_67_0>bootstrap.bat
+f:\boost\boost_1_67_0>b2 toolset=msvc-14.1  --build-type=complete --abbreviate-paths architecture=x86 address-model=64 runtime-link=static install -j8
+f:\boost\boost_1_67_0>b2 toolset=msvc-14.0  --build-type=complete --abbreviate-paths architecture=x86 address-model=64 runtime-link=static install -j8
+f:\boost\boost_1_67_0>b2 toolset=msvc-10.0  --build-type=complete --abbreviate-paths architecture=x86 address-model=64 runtime-link=static install -j8
+f:\boost\boost_1_67_0>b2 toolset=msvc-10.0  --build-type=complete --abbreviate-paths architecture=x86 address-model=64                     install -j8
+(install copies the results from the staging area over to the c:\boost\lib folder)
+
+
+Example Usage
+=============
+
+NOTE: In all cases, the server can be gracefully terminated by pressing CTRL-C.
+
+Example 1: Out of the Box Standard Execution
+
+ANT_Release_x64_v141.exe -v           <-- invoke server execution with default configuration (1 client only)
+ANT_Release_x64_v141.exe              <-- default client execution (100MB x 10 times)
+
+Example 2: Multi-Client Support
+
+ANT_Release_x64_v141.exe -v -i 0 -l 3
+  NON-RAPID MODE (test data will be randomly generated), support up to 3 client connections
+
+ANT_Release_x64_v141.exe -b 2000000000 -n WIN10_TEST
+  CLIENT MODE is implied, transfer 2 billion bytes, name the client and log as "WIN10_TEST"
+
+Example 3: FILE-MODE
+
+FILE-MODE has a slightly different meaning in ANT.  Conceptually, one just wants to transfer a file from System A to System B.
+But in ANT, FILE-MODE is simply a different way of populating the transfer buffer content in the server.  Instead of being
+a randomly generated sequence of bytes, the content is instead streamed from a specified filename.  So instead of a client
+sending a file to the server, the thinking is more along the lines of the client requesting a file from the server. 
+
+ANT_Release_x64_v141.exe -v -f sample_binary.dat
+ANT_Release_x64_v141.exe -o 1
+
+
+
+Understanding the Results
+=========================
+The ANT client provides a statistic report of each iteration.  Unfortunately there isn't a lot of flexibility
+in the units used in this report.  The intent here was to try to "standardize" this format, so that it could be 
+exported into other tools.
+
+The report is in two groups:   [  MBps   ]  [ sec  ]
+
+memory - Average in-memory transfer rate to copy the input stream into the application buffer.  Generally the faster
+         the CPU and/or RAM, the higher this number should be (assuming ANT is not interrupted by other processes).
+
+SEND   - Accounting of how long it took the SERVER to package and send the entire payload.  This uses the 
+         nanosecond numbers embedded in the HEADER/FOOTER, which are relative to the clock of the server (and not
+         influenced or biased if the client happens to have a different clock).
+
+RECV   - Accounting of how long it took the local CLIENT to re-package and receive the entire data stream payload.
+         Generally SEND will always be better, but not always.  We can't guarantee that the server and client are
+         time sync'd with each other, so the actual transmission time across the NIC is not accounted for (but this
+         does mean the times are authentic to those tasks, of packaging the data to be sent, and of reconstructing it
+         entirely on RECV).
+         NOTE: Care is taken to ensure that the RECV is not influenced by the time to log or output what was received.
+
+
+The later section  [  sec  ]  is the same SEND/RECV bytes divided by the respective rates -- resulting in the respective
+number of seconds used in each instance.
+
+
+(000001/000020) [memory=002,284.930  SEND=000,263.321  RECV=000,236.489 MBps]  [SEND=000,007.417289  RECV=000,008.258831 sec] (0)
+(000002/000020) [memory=002,296.390  SEND=000,265.745  RECV=000,254.516 MBps]  [SEND=000,007.349613  RECV=000,007.673881 sec] (0)
+(000003/000020) [memory=002,294.498  SEND=000,267.706  RECV=000,262.200 MBps]  [SEND=000,007.295788  RECV=000,007.448983 sec] (0)
+(000004/000020) [memory=002,299.830  SEND=000,270.257  RECV=000,267.872 MBps]  [SEND=000,007.226922  RECV=000,007.291265 sec] (0)
+(000005/000020) [memory=002,293.496  SEND=000,272.216  RECV=000,271.507 MBps]  [SEND=000,007.174918  RECV=000,007.193639 sec] (0)
+(000006/000020) [memory=002,290.161  SEND=000,274.114  RECV=000,274.712 MBps]  [SEND=000,007.125225  RECV=000,007.109727 sec] (0)
+(000007/000020) [memory=002,294.442  SEND=000,273.960  RECV=000,275.570 MBps]  [SEND=000,007.129227  RECV=000,007.087576 sec] (0)
+(000008/000020) [memory=002,285.824  SEND=000,274.359  RECV=000,276.545 MBps]  [SEND=000,007.118863  RECV=000,007.062599 sec] (0)
+(000009/000020) [memory=002,288.135  SEND=000,276.039  RECV=000,283.575 MBps]  [SEND=000,007.075542  RECV=000,006.887510 sec] (0)
+(000010/000020) [memory=002,289.024  SEND=000,278.830  RECV=000,286.486 MBps]  [SEND=000,007.004712  RECV=000,006.817534 sec] (0)
+(000011/000020) [memory=002,291.085  SEND=000,279.198  RECV=000,286.921 MBps]  [SEND=000,006.995495  RECV=000,006.807176 sec] (0)
+(000012/000020) [memory=002,291.328  SEND=000,278.338  RECV=000,285.936 MBps]  [SEND=000,007.017098  RECV=000,006.830643 sec] (0)
+(000013/000020) [memory=002,292.613  SEND=000,278.266  RECV=000,285.891 MBps]  [SEND=000,007.018904  RECV=000,006.831704 sec] (0)
+(000014/000020) [memory=002,294.202  SEND=000,277.978  RECV=000,285.625 MBps]  [SEND=000,007.026193  RECV=000,006.838078 sec] (0)
+(000015/000020) [memory=002,291.453  SEND=000,277.474  RECV=000,285.036 MBps]  [SEND=000,007.038939  RECV=000,006.852205 sec] (0)
+(000016/000020) [memory=002,299.108  SEND=000,277.729  RECV=000,285.522 MBps]  [SEND=000,007.032477  RECV=000,006.840541 sec] (0)
+(000017/000020) [memory=002,286.583  SEND=000,278.401  RECV=000,285.912 MBps]  [SEND=000,007.015517  RECV=000,006.831200 sec] (0)
+(000018/000020) [memory=002,279.130  SEND=000,276.459  RECV=000,284.018 MBps]  [SEND=000,007.064790  RECV=000,006.876761 sec] (0)
+(000019/000020) [memory=002,275.431  SEND=000,278.044  RECV=000,285.659 MBps]  [SEND=000,007.024509  RECV=000,006.837264 sec] (0)
+(000020/000020) [memory=002,287.550  SEND=000,280.083  RECV=000,288.258 MBps]  [SEND=000,006.973373  RECV=000,006.775611 sec] (0)
+(    TOTAL    ) [memory=002,291.509  SEND=000,277.371  RECV=000,283.031 MBps]  [SEND=000,007.041573  RECV=000,006.900755 sec] (TOTAL) (0)
+
+
+
+
+REFERENCES:
+
+LAN Speed Test by Totusoft  (please register, it is very reasonable price)
+==========================
+https://totusoft.com/lanspeed
+Convenient, a lot of options, visual.  Established history since 2015, very reputable.
+
+
+IPERF
+=====
+SourceForge:  https://sourceforge.net/projects/iperf/
+As of January 2016, migrated over to: https://github.com/esnet/iperf
+
+I downloaded cygwin and cloned the iperf git repo.  From there, the following
+commands got iperf3 compiled and running:
+./configure
+make
+make install
+/usr/local/bin/iperf3.exe
+
+Windows pre-built binaries for iperf can be found here:
+https://iperf.fr/iperf-download.php
+
+Example:
+iperf3.exe -s -p 5205
+iperf3.exe -c 127.0.0.1 -p 5205 -n 10000000000K  -fM
+
+Example results:
+....
+[  5]   2.00-3.00   sec   578 MBytes  4.85 Gbits/sec
+[  5]   3.00-4.00   sec   642 MBytes  5.39 Gbits/sec
+[  5]   4.00-5.00   sec   641 MBytes  5.38 Gbits/sec
+[  5]   5.00-6.00   sec   661 MBytes  5.55 Gbits/sec
+
+
+LST shows a similar result (using 2GByte packet): 607 MB/sec send, 630MB/sec recv.
+
+Both iperf and LST (LAN Speed Test) have multiple versions.  So when commenting on any specific performance results, those 
+results always need to be expressed relative to the versions and configuration/settings used.
+
+
